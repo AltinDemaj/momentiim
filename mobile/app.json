@@ -21,6 +21,7 @@
       "bundleIdentifier": "com.momentiim.app",
       "buildNumber": "1",
       "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false,
         "NSCameraUsageDescription": "Momenti Im needs the camera to capture event photos and scan QR codes.",
         "NSMicrophoneUsageDescription": "Momenti Im needs the microphone for video reels and voice guestbook messages.",
         "NSPhotoLibraryUsageDescription": "Momenti Im needs photo library access to save keepsakes and pick gallery photos.",
