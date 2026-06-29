@@ -1,0 +1,60 @@
+@import 'tailwindcss';
+
+@theme {
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  --color-moment-bg: #0b0b0c;
+  --color-moment-bg-secondary: #121214;
+  --color-moment-card: rgba(255, 255, 255, 0.05);
+  --color-moment-glass: rgba(255, 255, 255, 0.08);
+  --color-moment-text: #ffffff;
+  --color-moment-text-secondary: rgba(255, 255, 255, 0.72);
+  --color-moment-muted: rgba(255, 255, 255, 0.45);
+  --color-moment-accent: #f5e9d3;
+  --color-moment-accent-dim: rgba(245, 233, 211, 0.14);
+  --color-moment-success: #53d769;
+  --color-moment-warning: #ffcc66;
+  --color-moment-danger: #ff5c5c;
+  --color-moment-border: rgba(255, 255, 255, 0.08);
+  --color-moment-border-strong: rgba(255, 255, 255, 0.14);
+}
+
+@layer base {
+  * {
+    @apply border-[color:var(--color-moment-border)];
+  }
+
+  body {
+    background-color: var(--color-moment-bg);
+    color: var(--color-moment-text);
+    font-family: var(--font-sans);
+    @apply antialiased;
+  }
+
+  input[type='datetime-local'] {
+    color-scheme: dark;
+  }
+}
+
+@layer utilities {
+  .text-gradient {
+    @apply bg-gradient-to-r from-white via-[rgba(255,255,255,0.88)] to-[rgba(255,255,255,0.55)] bg-clip-text text-transparent;
+  }
+
+  .glass-panel {
+    background: var(--color-moment-glass);
+    border: 1px solid var(--color-moment-border);
+    @apply backdrop-blur-xl;
+  }
+
+  .motion-safe {
+    transition-duration: 280ms;
+    transition-timing-function: cubic-bezier(0, 0, 0.2, 1);
+  }
+}
+
+@media print {
+  body {
+    background: white;
+    color: black;
+  }
+}

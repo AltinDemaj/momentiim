@@ -1,0 +1,38 @@
+# A string used to distinguish Supabase projects locally.
+project_id = "momentiim"
+
+[api]
+enabled = true
+port = 54321
+schemas = ["public", "graphql_public"]
+extra_search_path = ["public", "extensions"]
+max_rows = 1000
+
+[db]
+port = 54322
+shadow_port = 54320
+major_version = 15
+
+[db.migrations]
+enabled = true
+
+[studio]
+enabled = true
+port = 54323
+
+[auth]
+enabled = true
+site_url = "http://localhost:3000"
+additional_redirect_urls = ["momentiim://**", "https://momentiim.com/**", "https://*.vercel.app/**"]
+jwt_expiry = 3600
+# Invite-only: existing users can sign in; no public email registration
+enable_signup = false
+
+[auth.email]
+# Keep email provider on for admin login (signInWithPassword)
+enable_signup = true
+enable_confirmations = false
+
+[storage]
+enabled = true
+file_size_limit = "50MiB"

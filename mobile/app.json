@@ -1,0 +1,97 @@
+{
+  "expo": {
+    "name": "Momenti Im",
+    "slug": "momentiim",
+    "scheme": "momentiim",
+    "version": "1.0.0",
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "orientation": "portrait",
+    "userInterfaceStyle": "dark",
+    "newArchEnabled": true,
+    "icon": "./assets/icon.png",
+    "splash": {
+      "image": "./assets/splash-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#09090b"
+    },
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.momentiim.app",
+      "buildNumber": "1",
+      "infoPlist": {
+        "NSCameraUsageDescription": "Momenti Im needs the camera to capture event photos and scan QR codes.",
+        "NSMicrophoneUsageDescription": "Momenti Im needs the microphone for video reels and voice guestbook messages.",
+        "NSPhotoLibraryUsageDescription": "Momenti Im needs photo library access to save keepsakes and pick gallery photos.",
+        "NSPhotoLibraryAddUsageDescription": "Momenti Im saves album photos to your library when you download them."
+      }
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#09090b"
+      },
+      "package": "com.momentiim.app",
+      "versionCode": 1,
+      "permissions": [
+        "android.permission.CAMERA",
+        "android.permission.RECORD_AUDIO",
+        "android.permission.READ_MEDIA_IMAGES",
+        "android.permission.READ_MEDIA_VIDEO",
+        "android.permission.POST_NOTIFICATIONS",
+        "android.permission.READ_EXTERNAL_STORAGE",
+        "android.permission.WRITE_EXTERNAL_STORAGE",
+        "android.permission.READ_MEDIA_VISUAL_USER_SELECTED",
+        "android.permission.READ_MEDIA_AUDIO"
+      ]
+    },
+    "plugins": [
+      "expo-router",
+      "expo-secure-store",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Momenti Im needs gallery access to pick photos.",
+          "cameraPermission": "Momenti Im needs camera access to shoot event photos."
+        }
+      ],
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Momenti Im needs camera access to scan QR codes and take photos.",
+          "microphonePermission": "Momenti Im needs microphone access to record video reels.",
+          "recordAudioAndroid": true
+        }
+      ],
+      [
+        "expo-media-library",
+        {
+          "photosPermission": "Momenti Im needs access to save photos to your library.",
+          "savePhotosPermission": "Momenti Im needs access to save album photos to your library."
+        }
+      ],
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/icon.png",
+          "color": "#C9A96E"
+        }
+      ],
+      "expo-asset",
+      "expo-font",
+      "expo-video"
+    ],
+    "experiments": {
+      "typedRoutes": true
+    },
+    "extra": {
+      "privacyPolicyUrl": "https://web-alpha-three-29.vercel.app/privacy",
+      "router": {},
+      "eas": {
+        "projectId": "4c4b9ccb-3252-42e3-9ed9-2abeed0f6ff4"
+      }
+    },
+    "owner": "altindemaj"
+  }
+}
