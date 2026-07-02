@@ -25,7 +25,7 @@ export default async function ProtectedAdminLayout({
       <header className="relative border-b border-[color:var(--color-moment-border)] bg-[rgba(11,11,12,0.85)] backdrop-blur-xl print:hidden">
         <div className="mx-auto flex max-w-[1400px] items-center justify-between px-6 py-4">
           <div className="flex items-center gap-10">
-            <Link href="/admin" className="flex items-center gap-3">
+            <Link href="/admin/rooms" className="flex items-center gap-3">
               <div className="flex h-9 w-9 items-center justify-center rounded-[12px] border border-[rgba(245,233,211,0.2)] bg-[color:var(--color-moment-accent-dim)]">
                 <Camera className="h-4 w-4 text-[color:var(--color-moment-accent)]" strokeWidth={1.75} />
               </div>
@@ -35,13 +35,19 @@ export default async function ProtectedAdminLayout({
             </Link>
             <nav className="hidden items-center gap-1 sm:flex">
               <Link
-                href="/admin"
+                href="/admin/rooms"
                 className="rounded-[10px] px-3 py-1.5 text-sm text-[color:var(--color-moment-muted)] motion-safe hover:bg-[rgba(255,255,255,0.05)] hover:text-[color:var(--color-moment-text)]"
               >
                 Rooms
               </Link>
               <Link
-                href="/admin/events/new"
+                href="/admin/social"
+                className="rounded-[10px] px-3 py-1.5 text-sm text-[color:var(--color-moment-muted)] motion-safe hover:bg-[rgba(255,255,255,0.05)] hover:text-[color:var(--color-moment-text)]"
+              >
+                Social
+              </Link>
+              <Link
+                href="/admin/rooms/new"
                 className="rounded-[10px] px-3 py-1.5 text-sm text-[color:var(--color-moment-muted)] motion-safe hover:bg-[rgba(255,255,255,0.05)] hover:text-[color:var(--color-moment-text)]"
               >
                 New room

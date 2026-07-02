@@ -50,6 +50,19 @@
     transition-duration: 280ms;
     transition-timing-function: cubic-bezier(0, 0, 0.2, 1);
   }
+
+  @keyframes shimmer {
+    0% {
+      transform: translateX(-100%);
+    }
+    100% {
+      transform: translateX(-50%);
+    }
+  }
+
+  .animate-shimmer {
+    animation: shimmer 1.8s ease-in-out infinite;
+  }
 }
 
 @media print {

@@ -49,6 +49,7 @@ export type SlideshowConfig = {
   publish_mode: string;
   hide_videos: boolean;
   updated_at: string | null;
+  clip_transitions?: ClipTransitionsMap;
 };
 
 export type StudioTab = 'gallery' | 'edit' | 'cover' | 'deliver';
@@ -67,11 +68,33 @@ export type PhotoEdits = {
   warmth?: number;
   vignette?: number;
   preset?: string;
+  /** Transform & crop (stored in photo_edits JSONB) */
+  scale?: number;
+  offsetX?: number;
+  offsetY?: number;
+  aspectFit?: 'native' | '9:16' | '1:1' | '4:5';
 };
+
+export type AspectFitPreset = PhotoEdits['aspectFit'];
+
+export const ASPECT_FIT_PRESETS = [
+  { id: 'native' as const, label: 'Native' },
+  { id: '9:16' as const, label: '9:16 Reel' },
+  { id: '1:1' as const, label: '1:1 Square' },
+  { id: '4:5' as const, label: '4:5 Portrait' },
+];
+
+export type ClipTransition = {
+  type: string;
+  duration_ms: number;
+};
+
+export type ClipTransitionsMap = Record<string, ClipTransition>;
 
 export const TRANSITIONS = [
   { id: 'crossfade', label: 'Cross dissolve' },
   { id: 'fade', label: 'Fade in/out' },
+  { id: 'cut', label: 'Cut' },
   { id: 'kenburns', label: 'Ken Burns' },
   { id: 'blur', label: 'Blur transition' },
   { id: 'film-burn', label: 'Film burn' },
@@ -116,6 +139,54 @@ export function editsToFilter(edits: PhotoEdits): string {
   if (edits.preset === 'sunset') filter += ' sepia(0.2) saturate(1.2) hue-rotate(-8deg)';
 
   return filter;
+}
+
+export function aspectRatioCss(fit: AspectFitPreset | undefined): string | undefined {
+  switch (fit) {
+    case '9:16':
+      return '9 / 16';
+    case '1:1':
+      return '1 / 1';
+    case '4:5':
+      return '4 / 5';
+    default:
+      return undefined;
+  }
+}
+
+export function editsToTransform(edits: PhotoEdits): string {
+  const scale = (edits.scale ?? 100) / 100;
+  const x = edits.offsetX ?? 0;
+  const y = edits.offsetY ?? 0;
+  return `scale(${scale}) translate(${x}px, ${y}px)`;
+}
+
+export function volumeToDb(volume: number): number {
+  if (volume <= 0.001) return -60;
+  return Math.round(20 * Math.log10(volume));
+}
+
+export function dbToVolume(db: number): number {
+  if (db <= -60) return 0;
+  return Math.min(2, Math.pow(10, db / 20));
+}
+
+export function transitionGlyph(type: string): string {
+  switch (type) {
+    case 'crossfade':
+      return '✕';
+    case 'fade':
+      return '⬇';
+    case 'cut':
+      return '▶';
+    default:
+      return '✕';
+  }
+}
+
+export function transitionShortLabel(type: string): string {
+  const t = TRANSITIONS.find((x) => x.id === type);
+  return t?.label.split(' ')[0] ?? type;
 }
 
 export function statusLabel(status: StudioPhoto['moderation_status']) {

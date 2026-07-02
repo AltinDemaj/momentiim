@@ -13,7 +13,8 @@ import {
   AlertTriangle,
 } from 'lucide-react';
 import type { PhotoEdits, StudioPhoto } from './types';
-import { PRESETS, statusLabel } from './types';
+import { ASPECT_FIT_PRESETS, PRESETS, statusLabel } from './types';
+import { PreciseSlider } from './PreciseSlider';
 
 function ActionBtn({
   icon: Icon,
@@ -22,6 +23,7 @@ function ActionBtn({
   disabled,
   variant,
   active,
+  docked,
 }: {
   icon: typeof Check;
   label: string;
@@ -29,54 +31,33 @@ function ActionBtn({
   disabled?: boolean;
   variant?: 'danger';
   active?: boolean;
+  docked?: boolean;
 }) {
+  const base = docked
+    ? 'border font-mono text-[10px] uppercase tracking-wider transition hover:bg-neutral-800/80 active:scale-95'
+    : 'rounded-lg text-xs font-semibold transition';
   return (
     <button
       type="button"
       onClick={onClick}
       disabled={disabled}
-      className={`flex items-center justify-center gap-1.5 rounded-lg px-2 py-2 text-xs font-semibold transition disabled:opacity-40 ${
+      className={`flex items-center justify-center gap-1.5 px-2 py-2 disabled:opacity-40 ${
         variant === 'danger'
-          ? 'bg-red-500/15 text-red-300 ring-1 ring-red-500/30 hover:bg-red-500/25'
+          ? docked
+            ? `${base} border-red-900/50 text-red-400/90 hover:bg-red-950/30`
+            : 'bg-red-500/15 text-red-300 ring-1 ring-red-500/30 hover:bg-red-500/25'
           : active
-            ? 'bg-[#C9A962]/20 text-[#F5E9D3] ring-1 ring-[#C9A962]/40'
-            : 'bg-white/5 text-white/70 ring-1 ring-white/10 hover:bg-white/10'
+            ? docked
+              ? `${base} border-amber-500/40 bg-amber-500/10 text-amber-200/90`
+              : 'bg-[#C9A962]/20 text-[#F5E9D3] ring-1 ring-[#C9A962]/40'
+            : docked
+              ? `${base} border-neutral-800 text-neutral-500 hover:text-neutral-300`
+              : 'bg-white/5 text-white/70 ring-1 ring-white/10 hover:bg-white/10'
       }`}
     >
       <Icon className="h-3.5 w-3.5" />
       {label}
     </button>
-  );
-}
-
-function SliderRow({
-  label,
-  value,
-  min = -100,
-  max = 100,
-  onChange,
-}: {
-  label: string;
-  value: number;
-  min?: number;
-  max?: number;
-  onChange: (v: number) => void;
-}) {
-  return (
-    <label className="block space-y-1">
-      <div className="flex justify-between text-[11px]">
-        <span className="font-medium text-white/50">{label}</span>
-        <span className="tabular-nums text-white/70">{value}</span>
-      </div>
-      <input
-        type="range"
-        min={min}
-        max={max}
-        value={value}
-        onChange={(e) => onChange(Number(e.target.value))}
-        className="w-full accent-[#C9A962]"
-      />
-    </label>
   );
 }
 
@@ -90,6 +71,7 @@ interface MetadataPanelProps {
   onDelete: () => void;
   onPublishOne?: () => void;
   onDurationChange: (ms: number) => void;
+  variant?: 'default' | 'docked';
 }
 
 export function MetadataPanel({
@@ -102,23 +84,36 @@ export function MetadataPanel({
   onDelete,
   onPublishOne,
   onDurationChange,
+  variant = 'default',
 }: MetadataPanelProps) {
+  const docked = variant === 'docked';
+
   if (!photo) {
     return (
-      <div className="rounded-2xl bg-[#121110]/80 p-6 ring-1 ring-white/10">
-        <p className="text-sm text-white/40">Select an item to edit metadata and adjustments.</p>
+      <div className={docked ? 'px-5 py-6' : 'rounded-2xl bg-[#121110]/80 p-6 ring-1 ring-white/10'}>
+        <p className="font-mono text-[11px] uppercase tracking-wider text-neutral-600">
+          Select an asset to inspect metadata and adjustments.
+        </p>
       </div>
     );
   }
 
   const duration = photo.slide_duration_ms ?? (photo.media_type === 'video' ? 8000 : 4500);
+  const sectionTitle = 'font-mono text-[11px] uppercase tracking-wider text-neutral-500';
+  const sectionDivider = docked ? 'border-t border-neutral-900 pt-6' : 'border-t border-white/10 pt-4';
 
   return (
-    <div className="max-h-[calc(100vh-12rem)] space-y-4 overflow-y-auto rounded-2xl bg-[#121110]/80 p-4 ring-1 ring-white/10 backdrop-blur-xl">
+    <div
+      className={
+        docked
+          ? 'space-y-6 px-5 py-6'
+          : 'max-h-[calc(100vh-12rem)] space-y-4 overflow-y-auto rounded-2xl bg-[#121110]/80 p-4 ring-1 ring-white/10 backdrop-blur-xl'
+      }
+    >
       <div>
-        <p className="text-xs font-semibold uppercase tracking-wider text-white/40">Metadata</p>
-        <p className="mt-1 text-sm font-medium">{statusLabel(photo.moderation_status)}</p>
-        <p className="text-[11px] text-white/40">
+        <p className={sectionTitle}>Metadata</p>
+        <p className="mt-2 text-sm font-medium text-neutral-200">{statusLabel(photo.moderation_status)}</p>
+        <p className="font-mono text-[11px] uppercase tracking-wider text-neutral-600">
           {photo.media_type === 'video' ? 'Video' : 'Photo'} ·{' '}
           {new Date(photo.created_at).toLocaleString()}
         </p>
@@ -131,14 +126,15 @@ export function MetadataPanel({
       </div>
 
       <div className="grid grid-cols-2 gap-2">
-        <ActionBtn icon={Check} label="Approve" disabled={busy} onClick={() => onModerate('approve')} />
-        <ActionBtn icon={X} label="Reject" disabled={busy} onClick={() => onModerate('reject')} />
-        <ActionBtn icon={EyeOff} label="Hide" disabled={busy} onClick={() => onModerate('hide')} />
-        <ActionBtn icon={Trash2} label="Delete" disabled={busy} variant="danger" onClick={onDelete} />
+        <ActionBtn docked={docked} icon={Check} label="Approve" disabled={busy} onClick={() => onModerate('approve')} />
+        <ActionBtn docked={docked} icon={X} label="Reject" disabled={busy} onClick={() => onModerate('reject')} />
+        <ActionBtn docked={docked} icon={EyeOff} label="Hide" disabled={busy} onClick={() => onModerate('hide')} />
+        <ActionBtn docked={docked} icon={Trash2} label="Delete" disabled={busy} variant="danger" onClick={onDelete} />
       </div>
 
       <div className="grid grid-cols-2 gap-2">
         <ActionBtn
+          docked={docked}
           icon={Heart}
           label={photo.is_favorite ? 'Unfavorite' : 'Favorite'}
           disabled={busy}
@@ -146,6 +142,7 @@ export function MetadataPanel({
           onClick={() => onModerate(photo.is_favorite ? 'unfavorite' : 'favorite')}
         />
         <ActionBtn
+          docked={docked}
           icon={Pin}
           label={photo.is_pinned ? 'Unpin' : 'Pin'}
           disabled={busy}
@@ -153,6 +150,7 @@ export function MetadataPanel({
           onClick={() => onModerate(photo.is_pinned ? 'unpin' : 'pin')}
         />
         <ActionBtn
+          docked={docked}
           icon={Star}
           label={photo.is_highlight ? 'Unhighlight' : 'Highlight'}
           disabled={busy}
@@ -160,6 +158,7 @@ export function MetadataPanel({
           onClick={() => onModerate(photo.is_highlight ? 'unhighlight' : 'highlight')}
         />
         <ActionBtn
+          docked={docked}
           icon={ImageIcon}
           label={photo.is_cover_candidate ? 'Remove cover' : 'Cover pick'}
           disabled={busy}
@@ -170,51 +169,103 @@ export function MetadataPanel({
         />
       </div>
 
-      <div className="space-y-3 border-t border-white/10 pt-4">
-        <p className="text-xs font-semibold uppercase tracking-wider text-white/40">Clip duration</p>
-        <SliderRow
-          label="Display time (ms)"
+      <div className={`space-y-4 ${sectionDivider}`}>
+        <p className={sectionTitle}>Transform & crop</p>
+        <PreciseSlider
+          label="Scale"
+          value={edits.scale ?? 100}
+          min={50}
+          max={200}
+          step={1}
+          unit="%"
+          onChange={(scale) => onEditsChange({ ...edits, scale })}
+        />
+        <PreciseSlider
+          label="Position X"
+          value={edits.offsetX ?? 0}
+          min={-400}
+          max={400}
+          step={1}
+          unit="px"
+          onChange={(offsetX) => onEditsChange({ ...edits, offsetX })}
+        />
+        <PreciseSlider
+          label="Position Y"
+          value={edits.offsetY ?? 0}
+          min={-400}
+          max={400}
+          step={1}
+          unit="px"
+          onChange={(offsetY) => onEditsChange({ ...edits, offsetY })}
+        />
+        <div className="space-y-2">
+          <p className={sectionTitle}>Aspect fit</p>
+          <div className="flex flex-wrap gap-1.5">
+            {ASPECT_FIT_PRESETS.map((p) => (
+              <button
+                key={p.id}
+                type="button"
+                onClick={() => onEditsChange({ ...edits, aspectFit: p.id })}
+                className={`rounded border px-2.5 py-1 font-mono text-[10px] uppercase tracking-wider transition hover:bg-neutral-800/80 active:scale-95 ${
+                  (edits.aspectFit ?? 'native') === p.id
+                    ? 'border-amber-500/40 bg-amber-500/10 text-amber-200/90'
+                    : 'border-neutral-800 text-neutral-600'
+                }`}
+              >
+                {p.label}
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      <div className={`space-y-4 ${sectionDivider}`}>
+        <p className={sectionTitle}>Clip duration</p>
+        <PreciseSlider
+          label="Display time"
           value={duration}
           min={2000}
           max={15000}
+          step={100}
+          unit="ms"
           onChange={onDurationChange}
         />
       </div>
 
-      <div className="space-y-3 border-t border-white/10 pt-4">
-        <p className="text-xs font-semibold uppercase tracking-wider text-white/40">Adjustments</p>
+      <div className={`space-y-4 ${sectionDivider}`}>
+        <p className={sectionTitle}>Adjustments</p>
         <div className="flex flex-wrap gap-1.5">
           {PRESETS.map((p) => (
             <button
               key={p.id}
               type="button"
               onClick={() => onEditsChange({ ...edits, preset: p.id === 'none' ? undefined : p.id })}
-              className={`rounded-full px-2.5 py-1 text-[10px] font-semibold ${
+              className={`rounded border px-2.5 py-1 font-mono text-[10px] uppercase tracking-wider transition hover:bg-neutral-800/80 active:scale-95 ${
                 (edits.preset ?? 'none') === p.id
-                  ? 'bg-[#C9A962] text-[#1A1612]'
-                  : 'bg-white/5 text-white/60'
+                  ? 'border-amber-500/40 bg-amber-500/10 text-amber-200/90'
+                  : 'border-neutral-800 text-neutral-600'
               }`}
             >
               {p.label}
             </button>
           ))}
         </div>
-        <SliderRow
+        <PreciseSlider
           label="Brightness"
           value={edits.brightness ?? 0}
           onChange={(v) => onEditsChange({ ...edits, brightness: v })}
         />
-        <SliderRow
+        <PreciseSlider
           label="Contrast"
           value={edits.contrast ?? 0}
           onChange={(v) => onEditsChange({ ...edits, contrast: v })}
         />
-        <SliderRow
+        <PreciseSlider
           label="Saturation"
           value={edits.saturation ?? 0}
           onChange={(v) => onEditsChange({ ...edits, saturation: v })}
         />
-        <SliderRow
+        <PreciseSlider
           label="Warmth"
           value={edits.warmth ?? 0}
           onChange={(v) => onEditsChange({ ...edits, warmth: v })}
@@ -223,7 +274,7 @@ export function MetadataPanel({
           type="button"
           disabled={busy}
           onClick={onSaveEdits}
-          className="w-full rounded-xl bg-white/10 py-2 text-xs font-semibold ring-1 ring-white/15 hover:bg-white/15 disabled:opacity-40"
+          className="w-full border border-neutral-800 bg-neutral-900/50 py-2.5 font-mono text-[11px] uppercase tracking-wider text-neutral-300 transition hover:bg-neutral-800/80 active:scale-95 disabled:opacity-40"
         >
           Save adjustments
         </button>
@@ -234,15 +285,15 @@ export function MetadataPanel({
           type="button"
           disabled={busy}
           onClick={onPublishOne}
-          className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#C9A962] py-2.5 text-sm font-bold text-[#1A1612] disabled:opacity-40"
+          className="flex w-full items-center justify-center gap-2 border border-amber-500/30 bg-amber-500/10 py-2.5 font-mono text-[11px] uppercase tracking-wider text-amber-200/90 transition hover:bg-amber-500/15 active:scale-95 disabled:opacity-40"
         >
           <Send className="h-4 w-4" />
           Deliver to client
         </button>
       )}
 
-      <p className="text-[10px] text-white/30">
-        Shortcuts: A approve · R reject · ← → navigate · Space preview
+      <p className="font-mono text-[10px] uppercase tracking-wider text-neutral-700">
+        A approve · R reject · ← → navigate · Space preview
       </p>
     </div>
   );

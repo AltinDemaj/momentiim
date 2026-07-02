@@ -15,8 +15,11 @@ import { CoverCreator } from '@/components/studio/CoverCreator';
 import { GalleryPanel } from '@/components/studio/GalleryPanel';
 import { MetadataPanel } from '@/components/studio/MetadataPanel';
 import { DeliverPanel } from '@/components/studio/DeliverPanel';
+import { AudioMixerPanel } from '@/components/studio/AudioMixerPanel';
 import { UnifiedTimelineEditor } from '@/components/studio/UnifiedTimelineEditor';
+import { AdminUserMenu } from '@/components/admin/AdminUserMenu';
 import type {
+  ClipTransition,
   PhotoEdits,
   QueueFilter,
   SlideshowConfig,
@@ -52,7 +55,15 @@ const DEFAULT_CONFIG: SlideshowConfig = {
   loop: true,
   publish_mode: 'approved_collection',
   hide_videos: false,
+  clip_transitions: {},
   updated_at: null,
+};
+
+const TAB_LABELS: Record<StudioTab, string> = {
+  gallery: 'Gallery',
+  edit: 'Edit',
+  cover: 'Cover',
+  deliver: 'Deliver',
 };
 
 interface StudioClientProps {
@@ -69,9 +80,10 @@ interface StudioClientProps {
     client_album_note?: string | null;
     guest_album_live?: boolean;
   };
+  userEmail: string;
 }
 
-export function StudioClient({ event }: StudioClientProps) {
+export function StudioClient({ event, userEmail }: StudioClientProps) {
   const [tab, setTab] = useState<StudioTab>('edit');
   const [photos, setPhotos] = useState<StudioPhoto[]>([]);
   const [config, setConfig] = useState<SlideshowConfig>({ ...DEFAULT_CONFIG, event_id: event.id });
@@ -125,6 +137,7 @@ export function StudioClient({ event }: StudioClientProps) {
         event_id: event.id,
         audio_tracks: (slideshow.audio_tracks ?? []).map((t: TimelineAudioClip) => normalizeAudioClip(t)),
         audio_clip_order: slideshow.audio_clip_order ?? [],
+        clip_transitions: slideshow.clip_transitions ?? {},
       });
     }
   }, [event.id]);
@@ -148,9 +161,12 @@ export function StudioClient({ event }: StudioClientProps) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ studio_status: 'in_studio' }),
     }).then(() => setStudioStatus('in_studio'));
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
     return () => {
       clearInterval(interval);
       if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
+      document.body.style.overflow = prevOverflow;
     };
   }, [loadPhotos, loadGallery, event.id]);
 
@@ -307,6 +323,7 @@ export function StudioClient({ event }: StudioClientProps) {
         loop: body.loop,
         publish_mode: body.publish_mode,
         hide_videos: body.hide_videos,
+        clip_transitions: body.clip_transitions,
       }),
     });
     const data = await res.json();
@@ -320,6 +337,7 @@ export function StudioClient({ event }: StudioClientProps) {
         audio_tracks: (data.slideshow.audio_tracks ?? []).map((t: TimelineAudioClip) => normalizeAudioClip(t)),
         audio_clip_order: data.slideshow.audio_clip_order ?? body.audio_clip_order,
         clip_order: data.slideshow.clip_order ?? body.clip_order,
+        clip_transitions: data.slideshow.clip_transitions ?? body.clip_transitions,
       });
       if (!opts?.silent) {
         setMessage('Timeline saved.');
@@ -383,7 +401,7 @@ export function StudioClient({ event }: StudioClientProps) {
 
   function handleTimelineConfigChange(patch: Partial<SlideshowConfig>) {
     setConfig((c) => ({ ...c, ...patch }));
-    if ('clip_order' in patch || 'audio_clip_order' in patch) {
+    if ('clip_order' in patch || 'audio_clip_order' in patch || 'clip_transitions' in patch) {
       scheduleAutoSave();
     } else {
       configDirtyRef.current = true;
@@ -466,205 +484,230 @@ export function StudioClient({ event }: StudioClientProps) {
     });
   }
 
+  function handleClipTransitionChange(afterClipId: string, patch: ClipTransition) {
+    setConfig((c) => ({
+      ...c,
+      clip_transitions: { ...(c.clip_transitions ?? {}), [afterClipId]: patch },
+    }));
+    configDirtyRef.current = true;
+    setTimelineDirty(true);
+    scheduleAutoSave();
+  }
+
+  function handleVisualDurationChange(photoId: string, ms: number) {
+    void updatePhoto(photoId, { slide_duration_ms: ms });
+  }
+
+  const selectedAudioClip = useMemo(() => {
+    if (timelineSelection?.kind !== 'audio') return null;
+    return config.audio_tracks.find((t) => t.id === timelineSelection.id) ?? null;
+  }, [timelineSelection, config.audio_tracks]);
+
   const eventDate = new Date(event.date).toLocaleDateString(undefined, { dateStyle: 'long' });
 
   return (
-    <div className="studio-shell min-h-screen bg-[#0B0B0C] text-[#E8E4DC]">
+    <div className="flex h-screen w-screen flex-col overflow-hidden bg-[#070708] text-neutral-200">
       <MediaLightbox item={lightboxItem} onClose={() => setLightboxItem(null)} />
 
-      <header className="sticky top-0 z-20 border-b border-white/10 bg-[#0B0B0C]/90 px-1 py-4 backdrop-blur-xl">
-        <div className="flex flex-wrap items-center justify-between gap-4">
-          <div className="flex items-center gap-4">
-            <Link
-              href={`/admin/events/${event.id}`}
-              className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/5 ring-1 ring-white/10 transition hover:bg-white/10"
-            >
-              <ChevronLeft className="h-5 w-5" />
-            </Link>
-            <div>
-            <p className="text-[10px] font-bold uppercase tracking-[0.25em] text-[#C9A962]">
-              Momenti Im Studio · Internal
-            </p>
-              <h1 className="text-xl font-bold tracking-tight md:text-2xl">{event.title}</h1>
-              <p className="text-xs text-white/45">
-                {event.client_name ? `${event.client_name} · ` : ''}
-                {eventDate}
-              </p>
-            </div>
-          </div>
+      <header className="flex h-11 shrink-0 select-none items-center justify-between border-b border-neutral-900 bg-[#0c0c0e] px-4">
+        <div className="flex min-w-0 items-center gap-3">
+          <Link
+            href={`/admin/events/${event.id}`}
+            className="flex h-7 w-7 shrink-0 items-center justify-center border border-neutral-800 text-neutral-500 hover:bg-neutral-900 hover:text-neutral-300"
+            title="Back to room"
+          >
+            <ChevronLeft className="h-4 w-4" />
+          </Link>
+          <p className="truncate font-mono text-xs tracking-wide text-neutral-500">
+            <span className="text-neutral-400">Momenti Im Studio</span>
+            <span className="mx-2 text-neutral-700">/</span>
+            <span className="text-neutral-300">{event.title}</span>
+          </p>
+        </div>
+        <div className="flex shrink-0 items-center gap-4">
           {(message || timelineDirty) && (
-            <p className="max-w-sm truncate rounded-xl bg-[#C9A962]/10 px-4 py-2 text-sm text-[#F5E9D3] ring-1 ring-[#C9A962]/30">
-              {message ?? (timelineDirty ? 'Saving timeline…' : '')}
+            <p className="max-w-[280px] truncate font-mono text-[10px] uppercase tracking-wider text-amber-400/90">
+              {message ?? 'Saving timeline…'}
             </p>
           )}
+          <AdminUserMenu email={userEmail} />
         </div>
       </header>
 
-      <div className="grid gap-0 lg:grid-cols-[72px_minmax(0,1fr)_300px]">
-        <nav className="hidden border-r border-white/10 bg-[#0E0E0F] py-4 lg:flex lg:flex-col lg:items-center lg:gap-1">
+      <div className="flex w-full flex-1 overflow-hidden">
+        <nav className="flex h-full w-16 shrink-0 flex-col items-center gap-2 border-r border-neutral-900 bg-[#0c0c0e] py-4">
           {(Object.keys(TAB_ICONS) as StudioTab[]).map((id) => {
             const Icon = TAB_ICONS[id];
+            const active = tab === id;
             return (
               <button
                 key={id}
                 type="button"
-                title={id}
+                title={TAB_LABELS[id]}
                 onClick={() => setTab(id)}
-                className={`flex h-12 w-12 items-center justify-center rounded-xl transition ${
-                  tab === id
-                    ? 'bg-[#C9A962]/20 text-[#F5E9D3] ring-1 ring-[#C9A962]/50'
-                    : 'text-white/45 hover:bg-white/5 hover:text-white'
+                className={`flex h-11 w-11 items-center justify-center border transition-colors ${
+                  active
+                    ? 'border-amber-500/40 bg-amber-500/10 text-amber-200/90'
+                    : 'border-transparent text-neutral-600 hover:border-neutral-800 hover:bg-neutral-900/60 hover:text-neutral-400'
                 }`}
               >
-                <Icon className="h-5 w-5" />
+                <Icon className="h-5 w-5" strokeWidth={1.5} />
               </button>
             );
           })}
         </nav>
 
-        <div className="flex min-h-[calc(100vh-5rem)] flex-col">
-          <div className="flex gap-1 overflow-x-auto border-b border-white/10 bg-[#0E0E0F] px-3 py-2 lg:hidden">
-            {(Object.keys(TAB_ICONS) as StudioTab[]).map((id) => (
-              <button
-                key={id}
-                type="button"
-                onClick={() => setTab(id)}
-                className={`shrink-0 rounded-full px-3 py-1.5 text-xs font-semibold capitalize ${
-                  tab === id ? 'bg-[#C9A962] text-[#1A1612]' : 'bg-white/5 text-white/60'
-                }`}
-              >
-                {id}
-              </button>
-            ))}
+        <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
+          <div className="relative flex flex-1 items-center justify-center overflow-hidden bg-[#020203] p-4">
+            {tab === 'edit' && (
+              <div className="h-full w-full">
+                <CanvasPreview
+                  embedded
+                  photo={selected}
+                  edits={edits}
+                  playing={previewPlaying}
+                  onOpenLightbox={() =>
+                    selected?.download_url &&
+                    setLightboxItem({
+                      id: selected.id,
+                      download_url: selected.download_url,
+                      media_type: selected.media_type,
+                    })
+                  }
+                />
+              </div>
+            )}
+
+            {tab === 'gallery' && (
+              <div className="h-full w-full overflow-y-auto">
+                <GalleryPanel
+                  photos={photos}
+                  filtered={filtered}
+                  loading={loading}
+                  queueFilter={queueFilter}
+                  selectedId={selectedId}
+                  batchMode={batchMode}
+                  batchSelection={batchSelection}
+                  onFilterChange={setQueueFilter}
+                  onSelect={(id) => {
+                    setSelectedId(id);
+                    setTimelineSelection(null);
+                  }}
+                  onToggleBatch={() => {
+                    setBatchMode((b) => !b);
+                    setBatchSelection(new Set());
+                  }}
+                  onToggleBatchItem={(id) =>
+                    setBatchSelection((prev) => {
+                      const next = new Set(prev);
+                      if (next.has(id)) next.delete(id);
+                      else next.add(id);
+                      return next;
+                    })
+                  }
+                  onBatchApprove={() => batchAction('approve')}
+                  onBatchReject={() => batchAction('reject')}
+                  onBatchFavorite={() => batchAction('favorite')}
+                  onScan={runScan}
+                />
+              </div>
+            )}
+
+            {tab === 'cover' && (
+              <div className="h-full w-full max-w-5xl overflow-y-auto">
+                <CoverCreator
+                  eventId={event.id}
+                  eventTitle={event.title}
+                  eventDate={eventDate}
+                  photos={photos}
+                  coverUrl={coverUrl}
+                  onCoverUpdated={setCoverUrl}
+                  onMessage={setMessage}
+                />
+              </div>
+            )}
+
+            {tab === 'deliver' && (
+              <div className="h-full w-full max-w-3xl overflow-y-auto">
+                <DeliverPanel
+                  clientName={event.client_name}
+                  eventTitle={event.title}
+                  studioStatus={studioStatus}
+                  deliveredAt={deliveredAt}
+                  guestAlbumLive={guestAlbumLive}
+                  approvedStaging={approvedStaging}
+                  timelineClipIds={config.clip_order}
+                  publishSelection={publishSelection}
+                  config={config}
+                  busy={busy}
+                  onToggleSelect={(id) =>
+                    setPublishSelection((prev) => {
+                      const next = new Set(prev);
+                      if (next.has(id)) next.delete(id);
+                      else next.add(id);
+                      return next;
+                    })
+                  }
+                  onSelectAll={() => setPublishSelection(new Set(approvedStaging.map((p) => p.id)))}
+                  onClearSelection={() => setPublishSelection(new Set())}
+                  onDeliverToClient={deliverToClient}
+                  onOpenGuestRoomOnly={openGuestRoomOnly}
+                  onConfigChange={(patch) => setConfig((c) => ({ ...c, ...patch }))}
+                  onSaveConfig={() => saveSlideshow()}
+                  onScan={runScan}
+                />
+              </div>
+            )}
           </div>
 
-          {(tab === 'gallery' || tab === 'edit') && (
-            <div className="border-b border-white/10 bg-[#0A0A0B] p-4">
-              <CanvasPreview
-                photo={selected}
-                edits={edits}
-                playing={previewPlaying}
-                onOpenLightbox={() =>
-                  selected?.download_url &&
-                  setLightboxItem({
-                    id: selected.id,
-                    download_url: selected.download_url,
-                    media_type: selected.media_type,
-                  })
-                }
-              />
-            </div>
-          )}
-
-          <main className="flex-1 p-4 md:p-6">
-            {tab === 'gallery' && (
-              <GalleryPanel
-                photos={photos}
-                filtered={filtered}
-                loading={loading}
-                queueFilter={queueFilter}
-                selectedId={selectedId}
-                batchMode={batchMode}
-                batchSelection={batchSelection}
-                onFilterChange={setQueueFilter}
-                onSelect={(id) => {
-                  setSelectedId(id);
-                  setTimelineSelection(null);
-                }}
-                onToggleBatch={() => {
-                  setBatchMode((b) => !b);
-                  setBatchSelection(new Set());
-                }}
-                onToggleBatchItem={(id) =>
-                  setBatchSelection((prev) => {
-                    const next = new Set(prev);
-                    if (next.has(id)) next.delete(id);
-                    else next.add(id);
-                    return next;
-                  })
-                }
-                onBatchApprove={() => batchAction('approve')}
-                onBatchReject={() => batchAction('reject')}
-                onBatchFavorite={() => batchAction('favorite')}
-                onScan={runScan}
-              />
-            )}
-            {tab === 'edit' && (
-              <UnifiedTimelineEditor
-                approvedMedia={approvedMedia}
-                config={config}
-                selection={timelineSelection}
-                uploadingAudio={uploadingMusic}
-                onSelect={setTimelineSelection}
-                onConfigChange={handleTimelineConfigChange}
-                onSave={() => saveSlideshow()}
-                onUploadAudio={uploadAudio}
-                onDeleteAudio={deleteAudio}
-                onUpdateAudio={updateAudio}
-              />
-            )}
-            {tab === 'cover' && (
-              <CoverCreator
-                eventId={event.id}
-                eventTitle={event.title}
-                eventDate={eventDate}
-                photos={photos}
-                coverUrl={coverUrl}
-                onCoverUpdated={setCoverUrl}
-                onMessage={setMessage}
-              />
-            )}
-            {tab === 'deliver' && (
-              <DeliverPanel
-                clientName={event.client_name}
-                eventTitle={event.title}
-                studioStatus={studioStatus}
-                deliveredAt={deliveredAt}
-                guestAlbumLive={guestAlbumLive}
-                approvedStaging={approvedStaging}
-                timelineClipIds={config.clip_order}
-                publishSelection={publishSelection}
-                config={config}
-                busy={busy}
-                onToggleSelect={(id) =>
-                  setPublishSelection((prev) => {
-                    const next = new Set(prev);
-                    if (next.has(id)) next.delete(id);
-                    else next.add(id);
-                    return next;
-                  })
-                }
-                onSelectAll={() => setPublishSelection(new Set(approvedStaging.map((p) => p.id)))}
-                onClearSelection={() => setPublishSelection(new Set())}
-                onDeliverToClient={deliverToClient}
-                onOpenGuestRoomOnly={openGuestRoomOnly}
-                onConfigChange={(patch) => setConfig((c) => ({ ...c, ...patch }))}
-                onSaveConfig={() => saveSlideshow()}
-                onScan={runScan}
-              />
-            )}
-          </main>
+          <div className="flex h-[320px] shrink-0 flex-col overflow-hidden border-t border-neutral-900 bg-[#0c0c0e]">
+            <UnifiedTimelineEditor
+              variant="docked"
+              approvedMedia={approvedMedia}
+              config={config}
+              selection={timelineSelection}
+              uploadingAudio={uploadingMusic}
+              clipTransitions={config.clip_transitions ?? {}}
+              onClipTransitionChange={handleClipTransitionChange}
+              onVisualDurationChange={handleVisualDurationChange}
+              onSelect={setTimelineSelection}
+              onConfigChange={handleTimelineConfigChange}
+              onSave={() => saveSlideshow()}
+              onUploadAudio={uploadAudio}
+              onDeleteAudio={deleteAudio}
+              onUpdateAudio={updateAudio}
+            />
+          </div>
         </div>
 
-        <aside className="hidden border-l border-white/10 bg-[#0E0E0F] p-4 lg:block">
-          {timelineSelection?.kind === 'audio' ? (
-            <div className="rounded-2xl bg-emerald-950/30 p-4 ring-1 ring-emerald-800/40">
-              <p className="text-xs font-semibold uppercase tracking-wider text-emerald-400/70">Audio clip</p>
-              <p className="mt-2 text-sm text-white/70">Adjust volume and fades in the timeline panel, or remove from track with ×.</p>
-            </div>
-          ) : (
-            <MetadataPanel
-              photo={selected}
-              edits={edits}
-              busy={busy}
-              onEditsChange={setEdits}
-              onSaveEdits={() => selected && updatePhoto(selected.id, { photo_edits: edits })}
-              onModerate={(action) => selected && moderate(selected.id, action)}
-              onDelete={() => selected && deletePhoto(selected.id)}
-              onPublishOne={() => selected && deliverToClient({ openGuestRoom: false, note: '', photoIds: [selected.id] })}
-              onDurationChange={(ms) => selected && updatePhoto(selected.id, { slide_duration_ms: ms })}
-            />
-          )}
+        <aside className="flex h-full w-[360px] shrink-0 flex-col overflow-hidden border-l border-neutral-900 bg-[#0c0c0e]">
+          <div className="shrink-0 border-b border-neutral-900 px-5 py-3">
+            <p className="font-mono text-xs uppercase tracking-wider text-neutral-500">Inspector</p>
+          </div>
+          <div className="min-h-0 flex-1 overflow-y-auto">
+            {selectedAudioClip ? (
+              <AudioMixerPanel
+                clip={selectedAudioClip}
+                onUpdate={(patch) => updateAudio(selectedAudioClip.id, patch)}
+                onDelete={() => deleteAudio(selectedAudioClip.id)}
+              />
+            ) : (
+              <MetadataPanel
+                variant="docked"
+                photo={selected}
+                edits={edits}
+                busy={busy}
+                onEditsChange={setEdits}
+                onSaveEdits={() => selected && updatePhoto(selected.id, { photo_edits: edits })}
+                onModerate={(action) => selected && moderate(selected.id, action)}
+                onDelete={() => selected && deletePhoto(selected.id)}
+                onPublishOne={() =>
+                  selected && deliverToClient({ openGuestRoom: false, note: '', photoIds: [selected.id] })
+                }
+                onDurationChange={(ms) => selected && updatePhoto(selected.id, { slide_duration_ms: ms })}
+              />
+            )}
+          </div>
         </aside>
       </div>
     </div>

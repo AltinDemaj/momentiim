@@ -10,13 +10,13 @@ import {
   ImageIcon,
   Lock,
   Share2,
-  Upload,
-  Users,
-  Camera,
-  Calendar,
   Send,
+  Users,
+  Calendar,
+  Settings2,
+  Sparkles,
 } from 'lucide-react';
-import { Breadcrumb, Button, Card, Skeleton, StatBlock } from '@/components/ui/admin-ui';
+import { Breadcrumb, Button, Skeleton } from '@/components/ui/admin-ui';
 import { MediaLightbox, type MediaItem } from '@/components/admin/MediaLightbox';
 import { GuestFeaturesPanel } from '@/components/admin/GuestFeaturesPanel';
 import { TestModePanel } from '@/components/admin/TestModePanel';
@@ -47,6 +47,7 @@ interface EventDetailProps {
     allow_guest_share?: boolean;
     allow_guest_video?: boolean;
     max_videos_per_guest?: number;
+    test_mode?: boolean;
   };
   tier: {
     name: string;
@@ -63,11 +64,28 @@ interface EventDetailProps {
   expoGoLink: string | null;
 }
 
+type HubTab = 'vault' | 'experience' | 'settings';
+
+function HubPanel({
+  children,
+  className = '',
+}: {
+  children: React.ReactNode;
+  className?: string;
+}) {
+  return (
+    <div
+      className={`rounded-xl border border-neutral-800/70 bg-[#121215] p-6 ${className}`}
+    >
+      {children}
+    </div>
+  );
+}
+
 function StatusBadge({ status, revealed }: { status: string; revealed: boolean }) {
   if (status !== 'active') {
     return (
-      <span className="inline-flex items-center gap-2 rounded-full border border-[color:var(--color-moment-border-strong)] bg-[color:var(--color-moment-card)] px-3 py-1 text-xs font-semibold text-[color:var(--color-moment-muted)]">
-        <span className="h-1.5 w-1.5 rounded-full bg-[color:var(--color-moment-muted)]" />
+      <span className="inline-flex items-center gap-2 rounded-full border border-neutral-700/60 bg-neutral-900/50 px-3 py-1 text-[10px] font-semibold uppercase tracking-wider text-neutral-400">
         Closed
       </span>
     );
@@ -75,16 +93,16 @@ function StatusBadge({ status, revealed }: { status: string; revealed: boolean }
 
   if (revealed) {
     return (
-      <span className="inline-flex items-center gap-2 rounded-full border border-[rgba(83,215,105,0.35)] bg-[rgba(83,215,105,0.1)] px-3 py-1 text-xs font-semibold text-[color:var(--color-moment-success)]">
-        <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-[color:var(--color-moment-success)]" />
+      <span className="inline-flex items-center gap-2 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-3 py-1 text-[10px] font-semibold uppercase tracking-wider text-emerald-300 shadow-[0_0_12px_rgba(52,211,153,0.12)]">
+        <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-400" />
         Gallery live
       </span>
     );
   }
 
   return (
-    <span className="inline-flex items-center gap-2 rounded-full border border-[rgba(245,233,211,0.25)] bg-[color:var(--color-moment-accent-dim)] px-3 py-1 text-xs font-semibold text-[color:var(--color-moment-accent)]">
-      <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-[color:var(--color-moment-accent)]" />
+    <span className="inline-flex items-center gap-2 rounded-full border border-amber-500/25 bg-amber-500/5 px-3 py-1 text-[10px] font-semibold uppercase tracking-wider text-amber-200/90">
+      <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-amber-400" />
       Collecting live
     </span>
   );
@@ -103,21 +121,19 @@ function GalleryGrid({
 }) {
   if (photos.length === 0) {
     return (
-      <div className="rounded-[18px] border border-dashed border-[color:var(--color-moment-border)] px-6 py-14 text-center">
+      <div className="rounded-xl border border-dashed border-neutral-800/80 px-6 py-12 text-center">
         <div className="mx-auto grid max-w-md grid-cols-3 gap-2">
           {Array.from({ length: 6 }).map((_, i) => (
-            <Skeleton key={i} className="aspect-square" />
+            <Skeleton key={i} className="aspect-square rounded-lg" />
           ))}
         </div>
-        <p className="mt-8 text-sm font-medium text-[color:var(--color-moment-text-secondary)]">
-          {emptyLabel}
-        </p>
+        <p className="mt-6 text-sm text-neutral-500">{emptyLabel}</p>
       </div>
     );
   }
 
   return (
-    <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-4">
+    <div className="grid grid-cols-2 gap-3 md:grid-cols-3">
       {photos.map((photo) => {
         const isVideo = photo.media_type === 'video';
 
@@ -132,7 +148,7 @@ function GalleryGrid({
                 media_type: photo.media_type ?? 'photo',
               })
             }
-            className="group relative overflow-hidden rounded-[14px] ring-1 ring-[color:var(--color-moment-border)] motion-safe hover:ring-[rgba(245,233,211,0.35)] text-left"
+            className="group relative overflow-hidden rounded-xl border border-neutral-800/60 text-left motion-safe hover:border-neutral-700"
           >
             {photo.download_url ? (
               isVideo ? (
@@ -156,12 +172,12 @@ function GalleryGrid({
               <Skeleton className="aspect-[4/5] w-full" />
             )}
             {isVideo && (
-              <span className="absolute right-2 top-2 rounded-full bg-[rgba(11,11,12,0.72)] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-[color:var(--color-moment-accent)] backdrop-blur-sm">
+              <span className="absolute right-2 top-2 rounded-md bg-black/70 px-2 py-0.5 text-[10px] font-mono uppercase tracking-wider text-amber-200/90">
                 Reel
               </span>
             )}
             {badge && !isVideo ? (
-              <span className="absolute left-2 top-2 rounded-full bg-[rgba(11,11,12,0.72)] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-[color:var(--color-moment-accent)] backdrop-blur-sm">
+              <span className="absolute left-2 top-2 rounded-md bg-black/70 px-2 py-0.5 text-[10px] font-mono uppercase tracking-wider text-emerald-300/90">
                 {badge}
               </span>
             ) : null}
@@ -171,6 +187,12 @@ function GalleryGrid({
     </div>
   );
 }
+
+const HUB_TABS: { id: HubTab; label: string }[] = [
+  { id: 'vault', label: '📸 Live Vault' },
+  { id: 'experience', label: '🎯 Guest Experience' },
+  { id: 'settings', label: '⚙️ Room Settings & Test' },
+];
 
 export function EventDetailClient({
   event,
@@ -189,6 +211,7 @@ export function EventDetailClient({
   const [copiedExpo, setCopiedExpo] = useState(false);
   const [copiedCode, setCopiedCode] = useState(false);
   const [testingOpen, setTestingOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState<HubTab>('vault');
   const [venueName, setVenueName] = useState(event.venue_name ?? '');
   const [allowDownload, setAllowDownload] = useState(event.allow_guest_download ?? false);
   const [allowShare, setAllowShare] = useState(event.allow_guest_share ?? false);
@@ -345,18 +368,16 @@ export function EventDetailClient({
     onChange: (v: boolean) => void;
   }) {
     return (
-      <label className="flex cursor-pointer items-start justify-between gap-4 py-3">
+      <label className="flex cursor-pointer items-start justify-between gap-4 border-b border-neutral-900/80 py-3 last:border-0">
         <span>
-          <span className="block text-sm font-medium text-[color:var(--color-moment-text)]">
-            {label}
-          </span>
-          <span className="mt-0.5 block text-xs text-[color:var(--color-moment-muted)]">{hint}</span>
+          <span className="block text-sm font-medium text-neutral-100">{label}</span>
+          <span className="mt-0.5 block text-xs leading-relaxed text-neutral-500">{hint}</span>
         </span>
         <input
           type="checkbox"
           checked={checked}
           onChange={(e) => onChange(e.target.checked)}
-          className="mt-1 h-4 w-4 accent-[color:var(--color-moment-accent)]"
+          className="mt-1 h-4 w-4 accent-amber-400"
         />
       </label>
     );
@@ -367,390 +388,430 @@ export function EventDetailClient({
     timeStyle: 'short',
   });
 
-  const vaultPhotos = [...staging, ...published];
+  const inputClass =
+    'mt-2 w-full rounded-[10px] border border-neutral-800/70 bg-neutral-950/50 px-4 py-2.5 text-sm text-white placeholder:text-neutral-600 focus:outline-none focus:ring-1 focus:ring-amber-500/30';
 
   return (
-    <>
-      <MediaLightbox item={lightboxItem} onClose={() => setLightboxItem(null)} />
-      <Breadcrumb
-        items={[
-          { label: 'Momenti Im', href: '/admin' },
-          { label: 'Rooms', href: '/admin' },
-          { label: event.title },
-        ]}
-      />
+    <div className="relative min-h-full bg-[#09090b]">
+      <div className="pointer-events-none absolute inset-x-0 top-0 h-72 bg-[radial-gradient(circle_at_top_left,_var(--tw-gradient-stops))] from-amber-500/5 via-transparent to-transparent" />
 
-      <header className="mb-10 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-        <div className="space-y-3">
-          <div className="flex flex-wrap items-center gap-3">
-            <h1 className="text-4xl font-extrabold tracking-tight text-gradient">{event.title}</h1>
-            <StatusBadge status={event.status} revealed={!!event.revealed_at} />
+      <div className="relative mx-auto max-w-[1600px] px-6 pb-16 pt-2">
+        <MediaLightbox item={lightboxItem} onClose={() => setLightboxItem(null)} />
+
+        <Breadcrumb
+          items={[
+            { label: 'Momenti Im', href: '/admin/rooms' },
+            { label: 'Rooms', href: '/admin/rooms' },
+            { label: event.title },
+          ]}
+        />
+
+        <header className="mb-8 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+          <div className="space-y-3">
+            <div className="flex flex-wrap items-center gap-3">
+              <h1 className="text-3xl font-semibold tracking-tight text-white sm:text-4xl">
+                {event.title}
+              </h1>
+              <StatusBadge status={event.status} revealed={!!event.revealed_at} />
+            </div>
+            <p className="text-sm text-neutral-400">
+              {event.client_name ? (
+                <>
+                  For <span className="text-neutral-200">{event.client_name}</span> · {eventDate}
+                </>
+              ) : (
+                eventDate
+              )}
+            </p>
           </div>
-          <p className="max-w-2xl text-sm text-[color:var(--color-moment-text-secondary)]">
-            {event.client_name ? (
-              <>
-                For <span className="text-[color:var(--color-moment-text)]">{event.client_name}</span>
-                {' · '}
-                {eventDate}
-              </>
-            ) : (
-              eventDate
-            )}
-          </p>
-        </div>
-        <div className="flex flex-wrap items-center gap-3">
           <Link
             href={`/admin/events/${event.id}/studio`}
-            className="inline-flex items-center gap-2 rounded-full border border-[rgba(245,233,211,0.25)] bg-[rgba(245,233,211,0.08)] px-4 py-2 text-sm font-semibold text-[color:var(--color-moment-accent)] motion-safe hover:bg-[rgba(245,233,211,0.14)]"
+            className="inline-flex items-center gap-2 rounded-xl border border-amber-500/25 bg-neutral-950/50 px-4 py-2.5 text-xs font-semibold uppercase tracking-wider text-amber-200/90 backdrop-blur-md motion-safe hover:bg-neutral-900/80"
           >
             <Lock className="h-4 w-4" />
             Production Studio
           </Link>
-          <p className="max-w-xs text-xs text-[color:var(--color-moment-muted)]">
-            Internal only — curate the album here, then deliver to {event.client_name ?? 'the client'}.
-          </p>
-        </div>
-      </header>
+        </header>
 
-      <div className="grid gap-8 xl:grid-cols-[280px_minmax(0,1fr)_320px]">
-        {/* Left — event intelligence */}
-        <aside className="space-y-4 xl:sticky xl:top-8 xl:self-start">
-          <Card className="space-y-4">
-            <div className="flex items-center gap-2 text-[color:var(--color-moment-accent)]">
-              <Calendar className="h-4 w-4" />
-              <h2 className="text-sm font-semibold uppercase tracking-[0.14em]">Event</h2>
-            </div>
-            <StatBlock label="Guests joined" value={stats.guestCount} />
-            <StatBlock label="Staging" value={stats.stagingCount} hint="Awaiting publish" />
-            <StatBlock label="Live in room" value={stats.publishedCount} />
-          </Card>
-
-          {tier && (
-            <Card className="space-y-3">
-              <div className="flex items-center gap-2 text-[color:var(--color-moment-accent)]">
-                <Camera className="h-4 w-4" />
-                <h2 className="text-sm font-semibold uppercase tracking-[0.14em]">Package</h2>
+        <div className="grid grid-cols-1 items-start gap-8 xl:grid-cols-12">
+          {/* Left — core metrics */}
+          <aside className="space-y-4 xl:col-span-3 xl:sticky xl:top-6 xl:self-start">
+            <HubPanel>
+              <div className="mb-4 flex items-center gap-2 text-amber-400/80">
+                <Calendar className="h-4 w-4" />
+                <h2 className="text-xs font-bold uppercase tracking-wider text-neutral-300">
+                  Live metrics
+                </h2>
               </div>
-              <p className="text-lg font-bold text-[color:var(--color-moment-text)]">{tier.name}</p>
-              <p className="text-sm text-[color:var(--color-moment-muted)]">
-                {tier.per_guest_limit} shots per guest · {tier.max_total_photos} total pool
-              </p>
-            </Card>
-          )}
+              <div className="space-y-3">
+                {[
+                  { label: 'Guests joined', value: stats.guestCount },
+                  { label: 'Staging', value: stats.stagingCount, hint: 'Awaiting publish' },
+                  { label: 'Live in room', value: stats.publishedCount },
+                ].map((stat) => (
+                  <div
+                    key={stat.label}
+                    className="rounded-lg border border-neutral-800/60 bg-neutral-950/40 px-4 py-3"
+                  >
+                    <p className="text-[10px] font-mono uppercase tracking-widest text-neutral-600">
+                      {stat.label}
+                    </p>
+                    <p className="mt-1 text-2xl font-semibold tabular-nums text-white">
+                      {stat.value}
+                    </p>
+                    {'hint' in stat && stat.hint && (
+                      <p className="mt-0.5 text-[10px] text-neutral-600">{stat.hint}</p>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </HubPanel>
 
-          <Card>
-            <div className="flex items-center gap-2 text-[color:var(--color-moment-accent)]">
-              <Users className="h-4 w-4" />
-              <h2 className="text-sm font-semibold uppercase tracking-[0.14em]">Guest permissions</h2>
-            </div>
-            <p className="mt-2 text-xs text-[color:var(--color-moment-muted)]">
-              Control what guests can do after the album develops — e.g. wedding couple opts in.
-            </p>
-
-            <div className="mt-3">
-              <label className="text-[11px] font-semibold uppercase tracking-wider text-[color:var(--color-moment-muted)]">
-                Event cover photo
-              </label>
-              {coverUrl && (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  src={coverUrl}
-                  alt="Event cover"
-                  className="mt-2 aspect-[16/9] w-full rounded-[10px] object-cover ring-1 ring-[color:var(--color-moment-border)]"
-                />
-              )}
-              <label className="mt-2 flex cursor-pointer items-center justify-center rounded-[10px] border border-dashed border-[color:var(--color-moment-border)] px-3 py-3 text-xs font-medium text-[color:var(--color-moment-accent)] motion-safe hover:bg-[rgba(255,255,255,0.03)]">
-                {uploadingCover ? 'Uploading…' : coverUrl ? 'Replace cover photo' : 'Upload cover photo'}
-                <input
-                  type="file"
-                  accept="image/jpeg,image/png,image/webp"
-                  className="hidden"
-                  onChange={handleCoverUpload}
-                  disabled={uploadingCover}
-                />
-              </label>
-            </div>
-
-            <div className="mt-3">
-              <label className="text-[11px] font-semibold uppercase tracking-wider text-[color:var(--color-moment-muted)]">
-                Venue name
-              </label>
-              <input
-                type="text"
-                value={venueName}
-                onChange={(e) => setVenueName(e.target.value)}
-                placeholder="Grand Hotel"
-                className="mt-2 w-full rounded-[10px] border border-[color:var(--color-moment-border)] bg-[color:var(--color-moment-bg-secondary)] px-3 py-2 text-sm text-[color:var(--color-moment-text)]"
-              />
-            </div>
-
-            <div className="mt-2 divide-y divide-[color:var(--color-moment-border)]">
-              <ToggleRow
-                label="Allow download"
-                hint="Guests can save photos to their camera roll"
-                checked={allowDownload}
-                onChange={setAllowDownload}
-              />
-              <ToggleRow
-                label="Allow share"
-                hint="Guests can share moments from the album"
-                checked={allowShare}
-                onChange={setAllowShare}
-              />
-              <ToggleRow
-                label="Allow video reels"
-                hint="Up to 3 reels per guest, 60 seconds each"
-                checked={allowVideo}
-                onChange={setAllowVideo}
-              />
-            </div>
-
-            {settingsMessage && (
-              <p className="mt-3 text-xs text-[color:var(--color-moment-success)]">{settingsMessage}</p>
-            )}
-
-            <Button
-              variant="secondary"
-              className="mt-4 w-full"
-              onClick={saveGuestSettings}
-              disabled={savingSettings}
-              type="button"
-            >
-              {savingSettings ? 'Saving…' : 'Save guest permissions'}
-            </Button>
-          </Card>
-
-          <TestModePanel eventId={event.id} testMode={!!(event as { test_mode?: boolean }).test_mode} />
-
-          <GuestFeaturesPanel eventId={event.id} />
-
-          <AudioGuestbookPanel eventId={event.id} />
-
-          <Card>
-            <div className="flex items-center gap-2 text-[color:var(--color-moment-accent)]">
-              <Users className="h-4 w-4" />
-              <h2 className="text-sm font-semibold uppercase tracking-[0.14em]">Guest album</h2>
-            </div>
-            <p className="mt-3 text-sm leading-relaxed text-[color:var(--color-moment-text-secondary)]">
-              {event.revealed_at
-                ? `Album went live ${new Date(event.revealed_at).toLocaleString()}`
-                : event.reveal_scheduled_at
-                  ? `Scheduled ${new Date(event.reveal_scheduled_at).toLocaleString()}`
-                  : 'Publish approved photos from staging to open the guest keepsake album.'}
-            </p>
-            <p className="mt-2 text-xs text-[color:var(--color-moment-muted)]">
-              {stats.stagingCount > 0
-                ? `${stats.stagingCount} moment${stats.stagingCount === 1 ? '' : 's'} in staging · ${stats.publishedCount} live for guests`
-                : `${stats.publishedCount} moment${stats.publishedCount === 1 ? '' : 's'} visible in the app`}
-            </p>
-            <Button
-              className="mt-4 w-full"
-              onClick={handlePublish}
-              disabled={publishing || staging.length === 0}
-              type="button"
-            >
-              <Send className="h-4 w-4" />
-              {publishing
-                ? 'Publishing…'
-                : staging.length > 0
-                  ? `Publish ${staging.length} to guest album`
-                  : 'Nothing to publish'}
-            </Button>
-          </Card>
-
-          <Card className="overflow-hidden p-0">
-            <button
-              type="button"
-              onClick={() => setTestingOpen((v) => !v)}
-              className="flex w-full items-center justify-between px-5 py-4 text-left motion-safe hover:bg-[rgba(255,255,255,0.03)]"
-            >
-              <div>
-                <p className="text-sm font-semibold text-[color:var(--color-moment-text)]">
-                  Testing links
+            {tier && (
+              <HubPanel>
+                <div className="mb-3 flex items-center gap-2 text-amber-400/80">
+                  <Sparkles className="h-4 w-4" />
+                  <h2 className="text-xs font-bold uppercase tracking-wider text-neutral-300">
+                    Package
+                  </h2>
+                </div>
+                <p className="text-xl font-semibold text-white">{tier.name}</p>
+                <p className="mt-2 text-sm leading-relaxed text-neutral-500">
+                  {tier.per_guest_limit} shots per guest · {tier.max_total_photos} total pool
                 </p>
-                <p className="text-xs text-[color:var(--color-moment-muted)]">Dev & Expo Go</p>
-              </div>
-              <ChevronDown
-                className={`h-5 w-5 text-[color:var(--color-moment-muted)] motion-safe ${testingOpen ? 'rotate-180' : ''}`}
-              />
-            </button>
-            {testingOpen && (
-              <div className="space-y-4 border-t border-[color:var(--color-moment-border)] px-5 py-4">
-                <div>
-                  <p className="text-[11px] font-semibold uppercase tracking-wider text-[color:var(--color-moment-muted)]">
-                    Join URL
-                  </p>
-                  <div className="mt-2 flex gap-2">
-                    <code className="flex-1 break-all rounded-[10px] bg-[color:var(--color-moment-bg-secondary)] px-3 py-2 font-mono text-[11px] text-[color:var(--color-moment-accent)]">
-                      {joinUrl}
-                    </code>
-                    <Button variant="secondary" onClick={copyJoinUrl} type="button" className="px-3">
-                      {copiedJoin ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
-                    </Button>
+              </HubPanel>
+            )}
+          </aside>
+
+          {/* Center — tabbed production desk */}
+          <section className="min-w-0 xl:col-span-6">
+            <div className="mb-4 flex flex-wrap gap-2">
+              {HUB_TABS.map((tab) => (
+                <button
+                  key={tab.id}
+                  type="button"
+                  onClick={() => setActiveTab(tab.id)}
+                  className={`rounded-lg px-4 py-2.5 text-xs font-semibold tracking-wide motion-safe ${
+                    activeTab === tab.id
+                      ? 'border border-amber-500/30 bg-amber-500/10 text-amber-100'
+                      : 'border border-transparent bg-neutral-900/40 text-neutral-500 hover:text-neutral-300'
+                  }`}
+                >
+                  {tab.label}
+                </button>
+              ))}
+            </div>
+
+            {activeTab === 'vault' && (
+              <HubPanel className="space-y-6">
+                <div className="flex flex-wrap items-start justify-between gap-4 border-b border-neutral-900/80 pb-5">
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <ImageIcon className="h-4 w-4 text-amber-400/80" />
+                      <h2 className="text-lg font-semibold text-white">Organizer vault</h2>
+                    </div>
+                    <p className="mt-1 text-sm text-neutral-500">
+                      Photos and reels appear instantly — click to preview.
+                    </p>
+                  </div>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={handlePublish}
+                      disabled={publishing || staging.length === 0}
+                      className="inline-flex items-center gap-2 rounded-lg border border-amber-500/30 bg-amber-500/10 px-4 py-2 text-xs font-semibold uppercase tracking-wider text-amber-200/90 disabled:opacity-40"
+                    >
+                      <Send className="h-3.5 w-3.5" />
+                      {publishing ? 'Publishing…' : 'Publish to album'}
+                    </button>
+                    {(['all', 'photo', 'video'] as const).map((f) => (
+                      <button
+                        key={f}
+                        type="button"
+                        onClick={() => setMediaFilter(f)}
+                        className={`rounded-md px-3 py-1.5 text-[11px] font-mono uppercase tracking-wider ${
+                          mediaFilter === f
+                            ? 'bg-neutral-800 text-neutral-200'
+                            : 'text-neutral-600 hover:text-neutral-400'
+                        }`}
+                      >
+                        {f === 'all' ? 'All' : f === 'photo' ? 'Photos' : 'Reels'}
+                      </button>
+                    ))}
                   </div>
                 </div>
-                {expoGoLink && (
-                  <div>
-                    <p className="text-[11px] font-semibold uppercase tracking-wider text-[color:var(--color-moment-muted)]">
-                      Expo Go
-                    </p>
-                    <div className="mt-2 flex gap-2">
-                      <code className="flex-1 break-all rounded-[10px] bg-[color:var(--color-moment-bg-secondary)] px-3 py-2 font-mono text-[11px] text-[color:var(--color-moment-success)]">
-                        {expoGoLink}
-                      </code>
-                      <Button variant="secondary" onClick={copyExpoLink} type="button" className="px-3">
-                        {copiedExpo ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
-                      </Button>
-                    </div>
+
+                {message && (
+                  <p className="rounded-lg border border-emerald-500/25 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-300">
+                    {message}
+                  </p>
+                )}
+
+                {loading ? (
+                  <div className="grid grid-cols-2 gap-3 md:grid-cols-3">
+                    {Array.from({ length: 6 }).map((_, i) => (
+                      <Skeleton key={i} className="aspect-[4/5] rounded-xl" />
+                    ))}
+                  </div>
+                ) : (
+                  <div className="space-y-8">
+                    <section>
+                      <h3 className="mb-3 font-mono text-[10px] uppercase tracking-[0.16em] text-neutral-600">
+                        Staging · {filterPhotos(staging).length}
+                      </h3>
+                      <GalleryGrid
+                        photos={filterPhotos(staging)}
+                        emptyLabel="No staging moments"
+                        badge="Staging"
+                        onOpen={setLightboxItem}
+                      />
+                    </section>
+                    <section>
+                      <h3 className="mb-3 font-mono text-[10px] uppercase tracking-[0.16em] text-neutral-600">
+                        Guest room · {filterPhotos(published).length}
+                      </h3>
+                      <GalleryGrid
+                        photos={filterPhotos(published)}
+                        emptyLabel="Nothing published yet"
+                        badge="Live"
+                        onOpen={setLightboxItem}
+                      />
+                    </section>
                   </div>
                 )}
-                <code className="block break-all rounded-[10px] bg-[color:var(--color-moment-bg-secondary)] px-3 py-2 font-mono text-[11px] text-[color:var(--color-moment-muted)]">
-                  {event.deep_link}
-                </code>
-              </div>
-            )}
-          </Card>
-        </aside>
 
-        {/* Center — live gallery */}
-        <section className="min-w-0">
-          <Card className="overflow-hidden p-0">
-            <div className="border-b border-[color:var(--color-moment-border)] px-6 py-5">
-              <div className="flex flex-wrap items-center justify-between gap-4">
-                <div>
-                  <div className="flex items-center gap-2">
-                    <ImageIcon className="h-4 w-4 text-[color:var(--color-moment-accent)]" />
-                    <h2 className="text-lg font-semibold text-[color:var(--color-moment-text)]">
-                      Live gallery
-                    </h2>
-                    <span className="text-sm font-normal text-[color:var(--color-moment-muted)]">
-                      Organizer vault
-                    </span>
-                  </div>
-                  <p className="mt-1 text-sm text-[color:var(--color-moment-muted)]">
-                    Photos and reels appear here instantly — click to preview in browser.
+                <div className="rounded-xl border border-neutral-900/80 bg-neutral-950/40 p-5">
+                  <h3 className="text-xs font-bold uppercase tracking-wider text-neutral-400">
+                    Guest album
+                  </h3>
+                  <p className="mt-2 text-sm leading-relaxed text-neutral-500">
+                    {event.revealed_at
+                      ? `Album went live ${new Date(event.revealed_at).toLocaleString()}`
+                      : event.reveal_scheduled_at
+                        ? `Scheduled ${new Date(event.reveal_scheduled_at).toLocaleString()}`
+                        : 'Publish approved photos from staging to open the guest keepsake album.'}
                   </p>
-                </div>
-                <div className="flex flex-wrap items-center gap-2">
                   <Button
+                    className="mt-4 w-full"
                     onClick={handlePublish}
                     disabled={publishing || staging.length === 0}
                     type="button"
                   >
                     <Send className="h-4 w-4" />
-                    {publishing ? 'Publishing…' : 'Publish to album'}
+                    {publishing
+                      ? 'Publishing…'
+                      : staging.length > 0
+                        ? `Publish ${staging.length} to guest album`
+                        : 'Nothing to publish'}
                   </Button>
-                  {(['all', 'photo', 'video'] as const).map((f) => (
-                    <button
-                      key={f}
-                      type="button"
-                      onClick={() => setMediaFilter(f)}
-                      className={`rounded-full px-3 py-1 text-xs font-semibold capitalize motion-safe ${
-                        mediaFilter === f
-                          ? 'bg-[color:var(--color-moment-accent-dim)] text-[color:var(--color-moment-accent)] ring-1 ring-[rgba(245,233,211,0.25)]'
-                          : 'text-[color:var(--color-moment-muted)] hover:text-[color:var(--color-moment-text-secondary)]'
-                      }`}
-                    >
-                      {f === 'all' ? 'All' : f === 'photo' ? 'Photos' : 'Reels'}
-                    </button>
-                  ))}
+                </div>
+              </HubPanel>
+            )}
+
+            {activeTab === 'experience' && (
+              <div className="space-y-4">
+                <GuestFeaturesPanel eventId={event.id} />
+                <AudioGuestbookPanel eventId={event.id} />
+              </div>
+            )}
+
+            {activeTab === 'settings' && (
+              <div className="space-y-4">
+                <HubPanel>
+                  <div className="mb-4 flex items-center gap-2">
+                    <Users className="h-4 w-4 text-amber-400/80" />
+                    <h2 className="text-xs font-bold uppercase tracking-wider text-neutral-300">
+                      Guest permissions
+                    </h2>
+                  </div>
+                  <p className="text-xs leading-relaxed text-neutral-500">
+                    Control what guests can do after the album develops.
+                  </p>
+
+                  <div className="mt-5">
+                    <label className="text-[10px] font-mono uppercase tracking-widest text-neutral-600">
+                      Event cover photo
+                    </label>
+                    {coverUrl && (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={coverUrl}
+                        alt="Event cover"
+                        className="mt-2 aspect-[16/9] w-full rounded-lg object-cover border border-neutral-800/60"
+                      />
+                    )}
+                    <label className="mt-2 flex cursor-pointer items-center justify-center rounded-lg border border-dashed border-neutral-800/80 bg-neutral-950/30 px-3 py-3 text-xs font-medium text-neutral-400 motion-safe hover:bg-neutral-900/50">
+                      {uploadingCover ? 'Uploading…' : coverUrl ? 'Replace cover photo' : 'Upload cover photo'}
+                      <input
+                        type="file"
+                        accept="image/jpeg,image/png,image/webp"
+                        className="hidden"
+                        onChange={handleCoverUpload}
+                        disabled={uploadingCover}
+                      />
+                    </label>
+                  </div>
+
+                  <div className="mt-5">
+                    <label className="text-[10px] font-mono uppercase tracking-widest text-neutral-600">
+                      Venue name
+                    </label>
+                    <input
+                      type="text"
+                      value={venueName}
+                      onChange={(e) => setVenueName(e.target.value)}
+                      placeholder="Grand Hotel"
+                      className={inputClass}
+                    />
+                  </div>
+
+                  <div className="mt-4">
+                    <ToggleRow
+                      label="Allow download"
+                      hint="Guests can save photos to their camera roll"
+                      checked={allowDownload}
+                      onChange={setAllowDownload}
+                    />
+                    <ToggleRow
+                      label="Allow share"
+                      hint="Guests can share moments from the album"
+                      checked={allowShare}
+                      onChange={setAllowShare}
+                    />
+                    <ToggleRow
+                      label="Allow video reels"
+                      hint="Up to 3 reels per guest, 60 seconds each"
+                      checked={allowVideo}
+                      onChange={setAllowVideo}
+                    />
+                  </div>
+
+                  {settingsMessage && (
+                    <p className="mt-3 text-xs text-emerald-400">{settingsMessage}</p>
+                  )}
+
+                  <Button
+                    variant="secondary"
+                    className="mt-4 w-full"
+                    onClick={saveGuestSettings}
+                    disabled={savingSettings}
+                    type="button"
+                  >
+                    {savingSettings ? 'Saving…' : 'Save guest permissions'}
+                  </Button>
+                </HubPanel>
+
+                <TestModePanel eventId={event.id} testMode={!!event.test_mode} />
+
+                <HubPanel className="overflow-hidden p-0">
+                  <button
+                    type="button"
+                    onClick={() => setTestingOpen((v) => !v)}
+                    className="flex w-full items-center justify-between px-6 py-4 text-left motion-safe hover:bg-neutral-900/30"
+                  >
+                    <div className="flex items-center gap-2">
+                      <Settings2 className="h-4 w-4 text-neutral-500" />
+                      <div>
+                        <p className="text-sm font-medium text-neutral-200">Testing links</p>
+                        <p className="text-xs text-neutral-600">Dev & Expo Go</p>
+                      </div>
+                    </div>
+                    <ChevronDown
+                      className={`h-5 w-5 text-neutral-600 motion-safe ${testingOpen ? 'rotate-180' : ''}`}
+                    />
+                  </button>
+                  {testingOpen && (
+                    <div className="space-y-4 border-t border-neutral-900/80 px-6 py-4">
+                      <div>
+                        <p className="text-[10px] font-mono uppercase tracking-widest text-neutral-600">
+                          Join URL
+                        </p>
+                        <div className="mt-2 flex gap-2">
+                          <code className="flex-1 break-all rounded-lg border border-neutral-800/60 bg-neutral-950/50 px-3 py-2 font-mono text-[11px] text-amber-200/80">
+                            {joinUrl}
+                          </code>
+                          <Button variant="secondary" onClick={copyJoinUrl} type="button" className="px-3">
+                            {copiedJoin ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+                          </Button>
+                        </div>
+                      </div>
+                      {expoGoLink && (
+                        <div>
+                          <p className="text-[10px] font-mono uppercase tracking-widest text-neutral-600">
+                            Expo Go
+                          </p>
+                          <div className="mt-2 flex gap-2">
+                            <code className="flex-1 break-all rounded-lg border border-neutral-800/60 bg-neutral-950/50 px-3 py-2 font-mono text-[11px] text-emerald-300/80">
+                              {expoGoLink}
+                            </code>
+                            <Button variant="secondary" onClick={copyExpoLink} type="button" className="px-3">
+                              {copiedExpo ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+                            </Button>
+                          </div>
+                        </div>
+                      )}
+                      <code className="block break-all rounded-lg border border-neutral-800/60 bg-neutral-950/50 px-3 py-2 font-mono text-[11px] text-neutral-500">
+                        {event.deep_link}
+                      </code>
+                    </div>
+                  )}
+                </HubPanel>
+              </div>
+            )}
+          </section>
+
+          {/* Right — print & share */}
+          <aside className="xl:col-span-3 xl:sticky xl:top-6 xl:self-start">
+            <HubPanel className="text-center">
+              <p className="text-[10px] font-mono uppercase tracking-[0.18em] text-neutral-600">
+                Print & share suite
+              </p>
+
+              <p className="mt-6 text-[10px] font-mono uppercase tracking-widest text-neutral-600">
+                Room code
+              </p>
+              <p className="mt-2 font-mono text-4xl font-bold tracking-[0.2em] text-white">
+                {event.join_code}
+              </p>
+              <button
+                type="button"
+                onClick={copyCode}
+                className="mt-2 text-[11px] text-neutral-600 motion-safe hover:text-amber-400/90"
+              >
+                {copiedCode ? 'Copied' : 'Copy for phone entry'}
+              </button>
+
+              <div className="relative mx-auto mt-8 w-fit">
+                <div className="absolute -inset-3 rounded-2xl bg-white/10 blur-xl" />
+                <div className="relative rounded-xl bg-white p-4 shadow-[0_0_40px_rgba(255,255,255,0.12)]">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={qrDataUrl} alt="Room QR" width={200} height={200} className="rounded-lg" />
                 </div>
               </div>
-            </div>
+              <p className="mt-4 text-[11px] text-neutral-600">Scan with any camera app</p>
 
-            <div className="p-6">
-              {message && (
-                <p className="mb-4 rounded-[14px] border border-[rgba(83,215,105,0.25)] bg-[rgba(83,215,105,0.08)] px-4 py-3 text-sm text-[color:var(--color-moment-success)]">
-                  {message}
-                </p>
-              )}
-
-              {loading ? (
-                <div className="grid grid-cols-2 gap-3 md:grid-cols-3">
-                  {Array.from({ length: 8 }).map((_, i) => (
-                    <Skeleton key={i} className="aspect-[4/5]" />
-                  ))}
-                </div>
-              ) : vaultPhotos.length === 0 ? (
-                <GalleryGrid photos={[]} emptyLabel="No moments yet — your vault is ready" badge="" onOpen={setLightboxItem} />
-              ) : (
-                <div className="space-y-8">
-                  <section>
-                    <h3 className="mb-3 text-[11px] font-semibold uppercase tracking-[0.14em] text-[color:var(--color-moment-muted)]">
-                      Staging · {filterPhotos(staging).length}
-                    </h3>
-                    <GalleryGrid
-                      photos={filterPhotos(staging)}
-                      emptyLabel="No staging moments"
-                      badge="Staging"
-                      onOpen={setLightboxItem}
-                    />
-                  </section>
-                  <section>
-                    <h3 className="mb-3 text-[11px] font-semibold uppercase tracking-[0.14em] text-[color:var(--color-moment-muted)]">
-                      Guest room · {filterPhotos(published).length}
-                    </h3>
-                    <GalleryGrid
-                      photos={filterPhotos(published)}
-                      emptyLabel="Nothing published yet"
-                      badge="Live"
-                      onOpen={setLightboxItem}
-                    />
-                  </section>
-                </div>
-              )}
-            </div>
-          </Card>
-        </section>
-
-        {/* Right — print & share */}
-        <aside className="space-y-4 xl:sticky xl:top-8 xl:self-start">
-          <div className="glass-panel rounded-[18px] p-6 shadow-[0_24px_80px_rgba(0,0,0,0.35)]">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[color:var(--color-moment-muted)]">
-              Print & share suite
-            </p>
-
-            <p className="mt-5 text-[11px] font-semibold uppercase tracking-[0.14em] text-[color:var(--color-moment-muted)]">
-              Room code
-            </p>
-            <p className="mt-2 font-mono text-5xl font-bold tracking-[0.22em] text-[color:var(--color-moment-accent)]">
-              {event.join_code}
-            </p>
-            <button
-              type="button"
-              onClick={copyCode}
-              className="mt-3 text-xs text-[color:var(--color-moment-muted)] motion-safe hover:text-[color:var(--color-moment-accent)]"
-            >
-              {copiedCode ? 'Copied' : 'Copy for phone entry'}
-            </button>
-
-            <div className="my-6 h-px bg-[color:var(--color-moment-border)]" />
-
-            <div className="mx-auto w-fit rounded-[16px] bg-white p-4 shadow-[0_20px_60px_rgba(0,0,0,0.45)]">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={qrDataUrl} alt="Room QR" width={200} height={200} className="rounded-[10px]" />
-            </div>
-            <p className="mt-4 text-center text-xs text-[color:var(--color-moment-muted)]">
-              Scan with any camera app
-            </p>
-
-            <div className="mt-6 space-y-2">
-              <Link
-                href={`/admin/events/${event.id}/sign`}
-                target="_blank"
-                className="flex w-full items-center justify-center gap-2 rounded-[14px] border border-[rgba(245,233,211,0.25)] bg-[color:var(--color-moment-accent-dim)] px-4 py-3.5 text-sm font-semibold text-[color:var(--color-moment-accent)] motion-safe hover:bg-[rgba(245,233,211,0.2)]"
-              >
-                <Download className="h-4 w-4" />
-                Download printable table sign
-              </Link>
-              <Button variant="secondary" className="w-full" onClick={shareJoin} type="button">
-                <Share2 className="h-4 w-4" />
-                Share join link
-              </Button>
-            </div>
-          </div>
-        </aside>
+              <div className="mt-6 space-y-2">
+                <Link
+                  href={`/admin/events/${event.id}/sign`}
+                  target="_blank"
+                  className="group flex w-full items-center justify-center gap-2 rounded-lg bg-neutral-900/40 px-4 py-3 text-xs font-semibold uppercase tracking-wider text-neutral-300 motion-safe hover:bg-neutral-800/80"
+                >
+                  <Download className="h-4 w-4 transition-transform group-hover:scale-110" />
+                  Download sign
+                </Link>
+                <button
+                  type="button"
+                  onClick={shareJoin}
+                  className="group flex w-full items-center justify-center gap-2 rounded-lg bg-neutral-900/40 px-4 py-3 text-xs font-semibold uppercase tracking-wider text-neutral-300 motion-safe hover:bg-neutral-800/80"
+                >
+                  <Share2 className="h-4 w-4 transition-transform group-hover:scale-110" />
+                  Share link
+                </button>
+              </div>
+            </HubPanel>
+          </aside>
+        </div>
       </div>
-    </>
+    </div>
   );
 }

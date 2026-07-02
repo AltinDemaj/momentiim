@@ -1,0 +1,27 @@
+# Upload this file to TikTok Developer Portal → App Review → Demo video
+
+**File:** momentiim-tiktok-integration-demo.mp4
+
+## What reviewers should see (~60–90 seconds)
+
+Real Momenti Im web app — not a mockup page:
+
+1. Admin login at /admin/login (email + password typed in)
+2. Rooms dashboard with live event data
+3. Click "Social" in the nav → Social Content Queue
+4. Scroll through anonymized 9:16 marketing draft cards
+5. Click **Generate now** (if needed) and wait for new draft
+6. Click **Publish to IG & TikTok (Test)** and show the result message
+
+## Re-record (recommended after deploy)
+
+From web/:
+
+  $env:DEMO_ADMIN_EMAIL="your-admin@gmail.com"
+  $env:DEMO_ADMIN_PASSWORD="your-password"
+  $env:DEMO_BASE_URL="https://web-alpha-three-29.vercel.app"
+  npm run record-tiktok-demo
+
+Use production URL for TikTok review so the domain matches your app listing.
+
+Do NOT use `npm run record-tiktok-demo-auto` — that records a fake static page.

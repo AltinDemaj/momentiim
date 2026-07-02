@@ -30,5 +30,5 @@ export default async function StudioPage({
 
   const eventRow = event as unknown as StudioEventRow;
 
-  return <StudioClient event={eventRow} />;
+  return <StudioClient event={eventRow} userEmail={auth.profile.email} />;
 }

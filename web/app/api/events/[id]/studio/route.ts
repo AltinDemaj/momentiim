@@ -120,6 +120,7 @@ export async function PATCH(
       'loop',
       'publish_mode',
       'hide_videos',
+      'clip_transitions',
     ] as const;
 
     const updates: Record<string, unknown> = { updated_at: new Date().toISOString() };
