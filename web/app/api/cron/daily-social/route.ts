@@ -16,6 +16,12 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
+  // Disabled per owner request (2026-10-28): no draft generation, no email.
+  if (process.env.DAILY_SOCIAL_ENABLED !== '1') {
+    console.log('[cron/daily-social] disabled');
+    return NextResponse.json({ ok: true, skipped: true, reason: 'disabled' });
+  }
+
   try {
     const result = await runDailySocialPipeline();
     return NextResponse.json({ ok: true, ...result });
